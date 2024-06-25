@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 import { runAppleScript } from 'run-applescript'
 import { getAverageColor } from 'fast-average-color-node'
 import * as hue from 'node-hue-api'
+import pLimit from 'p-limit'
 import type { Api as HueAPI } from 'node-hue-api/dist/esm/api/Api'
 
 dotenv.config()
@@ -22,22 +23,36 @@ end if
   return state
 }
 
+let _authenticatedApi: HueAPI
+
 async function connectToHue() {
-  const hueBridgeDiscovery = await hue.discovery.nupnpSearch()
+  if (_authenticatedApi) return _authenticatedApi
 
-  if (!hueBridgeDiscovery.length) {
-    throw new Error('No Hue bridges found on the network')
+  let bridgeIpAddress = process.env.HUE_BRIDGE_IP
+
+  if (!bridgeIpAddress) {
+    const hueBridgeDiscovery = await hue.discovery.nupnpSearch()
+
+    if (!hueBridgeDiscovery.length) {
+      throw new Error('No Hue bridges found on the network')
+    }
+
+    bridgeIpAddress = hueBridgeDiscovery[0].ipaddress
+
+    console.log(`
+Add this environment variable to your .env:
+
+HUE_BRIDGE_IP=${bridgeIpAddress}
+`)
   }
-
-  let authenticatedApi: HueAPI
 
   if (!process.env.HUE_USERNAME || !process.env.HUE_CLIENT_KEY) {
     const unauthenticatedApi = await hue.api
-      .createLocal(hueBridgeDiscovery[0].ipaddress)
+      .createLocal(bridgeIpAddress)
       .connect()
 
     const user = await unauthenticatedApi.users.createUser(
-      'spotify-hue-sync',
+      'spotify-album-art-hue-sync',
       'macbook-of-eli'
     )
     console.log(`
@@ -47,16 +62,16 @@ HUE_USERNAME=${user.username}
 HUE_CLIENT_KEY=${user.clientkey}
 `)
 
-    authenticatedApi = await hue.api
-      .createLocal(hueBridgeDiscovery[0].ipaddress)
+    _authenticatedApi = await hue.api
+      .createLocal(bridgeIpAddress)
       .connect(user.username, user.clientkey)
   } else {
-    authenticatedApi = await hue.api
-      .createLocal(hueBridgeDiscovery[0].ipaddress)
+    _authenticatedApi = await hue.api
+      .createLocal(bridgeIpAddress)
       .connect(process.env.HUE_USERNAME, process.env.HUE_CLIENT_KEY)
   }
 
-  return authenticatedApi
+  return _authenticatedApi
 }
 
 let previousAlbumArtworkUrl: string
@@ -66,10 +81,12 @@ async function main() {
   const albumArtworkUrl = await getNativeSpotifyAlbumArtworkUrl()
 
   if (!albumArtworkUrl) {
+    // console.debug('Spotify is not running')
     return
   } else if (!previousAlbumArtworkUrl) {
     previousAlbumArtworkUrl = albumArtworkUrl
   } else if (albumArtworkUrl === previousAlbumArtworkUrl) {
+    // console.debug('No new album artwork detected')
     return
   }
 
@@ -78,7 +95,15 @@ async function main() {
   const [red, green, blue] = color.value
 
   // Connect to the Hue bridge and set the color on the target light
-  const hueApi = await connectToHue()
+  try {
+    var hueApi = await connectToHue()
+  } catch (e: any) {
+    if (e instanceof hue.ApiError) {
+      console.log(e.getHueErrorType())
+    }
+
+    throw e
+  }
   const monitorLightQuery = await hueApi.lights.getLightByName('Office Monitor')
 
   if (!monitorLightQuery?.length) {
@@ -95,4 +120,6 @@ async function main() {
   await hueApi.lights.setLightState(monitorLightId, lightState)
 }
 
-setInterval(main, 1000)
+const limit = pLimit(1)
+
+setInterval(() => limit(main), 1000)

@@ -17,6 +17,9 @@ importers:
       node-hue-api:
         specifier: 5.0.0-beta.16
         version: 5.0.0-beta.16
+      p-limit:
+        specifier: ^3.1.0
+        version: 3.1.0
       run-applescript:
         specifier: ^7.0.0
         version: 7.0.0
@@ -359,6 +362,10 @@ packages:
     resolution: {integrity: sha512-JsCQlhOt9e556zzb50BzsMjQ2/Pj1J6srtQS+6mwAhjXsCMT8jm6wEmQCDb7sXVn+5LFtKpq4nmYix1fBWtm8A==}
     engines: {node: '>= 16.0.0'}
 
+  p-limit@3.1.0:
+    resolution: {integrity: sha512-TYOanM3wGwNGsZN2cVTYPArw454xnXj5qmWF1bEoAc4+cU/ol7GVh7odevjp1FNHduHc3KZMcFduxU5Xc6uJRQ==}
+    engines: {node: '>=10'}
+
   prettier@3.3.2:
     resolution: {integrity: sha512-rAVeHYMcv8ATV5d508CFdn+8/pHPpXeIid1DdrPwXnaAdH7cqjVbpJaT5eq4yRAFU/lsbwYwSF/n5iNrdJHPQA==}
     engines: {node: '>=14'}
@@ -402,6 +409,10 @@ packages:
 
   whatwg-url@5.0.0:
     resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
+
+  yocto-queue@0.1.0:
+    resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
+    engines: {node: '>=10'}
 
 snapshots:
 
@@ -642,6 +653,10 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
+  p-limit@3.1.0:
+    dependencies:
+      yocto-queue: 0.1.0
+
   prettier@3.3.2: {}
 
   resolve-pkg-maps@1.0.0: {}
@@ -700,3 +715,5 @@ snapshots:
     dependencies:
       tr46: 0.0.3
       webidl-conversions: 3.0.1
+
+  yocto-queue@0.1.0: {}
