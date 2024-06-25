@@ -1,0 +1,30 @@
+{
+  "name": "hue-spotify-current-track",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "prettier": {
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "semi": false,
+    "singleQuote": true,
+    "bracketSpacing": true
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "fast-average-color-node": "^3.0.0",
+    "node-hue-api": "5.0.0-beta.16",
+    "run-applescript": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "prettier": "^3.3.2",
+    "tsx": "^4.15.7"
+  }
+}
