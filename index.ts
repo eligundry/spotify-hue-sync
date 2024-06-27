@@ -4,11 +4,18 @@ import { getAverageColor } from 'fast-average-color-node'
 import * as hue from 'node-hue-api'
 import pLimit from 'p-limit'
 import type { Api as HueAPI } from 'node-hue-api/dist/esm/api/Api'
+import winston from 'winston'
 
 dotenv.config()
 
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.simple(),
+})
+
 async function getNativeSpotifyAlbumArtworkUrl() {
-  const state = await runAppleScript(`
+  try {
+    const state = await runAppleScript(`
 if application "Spotify" is running then
   tell application "Spotify"
     return current track's artwork url
@@ -18,9 +25,15 @@ else
 end if
   `)
 
-  if (state === 'not-running') return null
+    if (state === 'not-running') {
+      return null
+    }
 
-  return state
+    return state
+  } catch (e) {
+    logger.error(e)
+    return 'not-running'
+  }
 }
 
 let _authenticatedApi: HueAPI
@@ -91,33 +104,49 @@ async function main() {
   }
 
   // Get the average color of the album artwork
-  const color = await getAverageColor(albumArtworkUrl)
-  const [red, green, blue] = color.value
+  try {
+    const color = await getAverageColor(albumArtworkUrl)
+    var [red, green, blue] = color.value
+  } catch (e) {
+    logger.error(e)
+    return
+  }
 
   // Connect to the Hue bridge and set the color on the target light
   try {
     var hueApi = await connectToHue()
   } catch (e: any) {
-    if (e instanceof hue.ApiError) {
-      console.log(e.getHueErrorType())
-    }
-
-    throw e
-  }
-  const monitorLightQuery = await hueApi.lights.getLightByName('Office Monitor')
-
-  if (!monitorLightQuery?.length) {
-    console.warn('No light found with the name "Office Monitor"')
+    logger.error(e)
     return
   }
 
-  const monitorLightId = monitorLightQuery[0].id
+  let monitorLightId: string | number
 
-  const lightState = new hue.model.lightStates.LightState()
-    .on()
-    .rgb(red, green, blue)
+  try {
+    const monitorLightQuery =
+      await hueApi.lights.getLightByName('Office Monitor')
 
-  await hueApi.lights.setLightState(monitorLightId, lightState)
+    if (!monitorLightQuery?.length) {
+      console.warn('No light found with the name "Office Monitor"')
+      return
+    }
+
+    monitorLightId = monitorLightQuery[0].id
+  } catch (e) {
+    logger.error(e)
+    return
+  }
+
+  try {
+    const lightState = new hue.model.lightStates.LightState()
+      .on()
+      .rgb(red, green, blue)
+
+    await hueApi.lights.setLightState(monitorLightId, lightState)
+  } catch (e) {
+    logger.error(e)
+    return
+  }
 }
 
 const limit = pLimit(1)
