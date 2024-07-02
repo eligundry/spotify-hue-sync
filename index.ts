@@ -9,8 +9,12 @@ import winston from 'winston'
 dotenv.config()
 
 const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.simple(),
+  level: 'debug',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.simple()
+  ),
+  transports: [new winston.transports.Console()],
 })
 
 async function getNativeSpotifyAlbumArtworkUrl() {
@@ -94,7 +98,7 @@ async function main() {
   const albumArtworkUrl = await getNativeSpotifyAlbumArtworkUrl()
 
   if (!albumArtworkUrl) {
-    // console.debug('Spotify is not running')
+    logger.debug('Spotify is not running')
     return
   } else if (!previousAlbumArtworkUrl) {
     previousAlbumArtworkUrl = albumArtworkUrl
@@ -102,6 +106,8 @@ async function main() {
     // console.debug('No new album artwork detected')
     return
   }
+
+  logger.debug('updating album artwork', { albumArtworkUrl })
 
   // Get the average color of the album artwork
   try {
@@ -112,6 +118,8 @@ async function main() {
     return
   }
 
+  logger.debug('average color', { red, green, blue })
+
   // Connect to the Hue bridge and set the color on the target light
   try {
     var hueApi = await connectToHue()
@@ -119,6 +127,8 @@ async function main() {
     logger.error(e)
     return
   }
+
+  logger.debug('connected to Hue bridge')
 
   let monitorLightId: string | number
 
@@ -137,12 +147,15 @@ async function main() {
     return
   }
 
+  logger.debug('found monitor light', { monitorLightId })
+
   try {
     const lightState = new hue.model.lightStates.LightState()
       .on()
       .rgb(red, green, blue)
 
-    await hueApi.lights.setLightState(monitorLightId, lightState)
+    const result = await hueApi.lights.setLightState(monitorLightId, lightState)
+    logger.debug('set light state', result)
   } catch (e) {
     logger.error(e)
     return
