@@ -100,14 +100,18 @@ async function main() {
   if (!albumArtworkUrl) {
     logger.debug('Spotify is not running')
     return
-  } else if (!previousAlbumArtworkUrl) {
-    previousAlbumArtworkUrl = albumArtworkUrl
   } else if (albumArtworkUrl === previousAlbumArtworkUrl) {
-    // console.debug('No new album artwork detected')
     return
+  } else if (!previousAlbumArtworkUrl) {
+    logger.debug('initializing', { albumArtworkUrl })
+    previousAlbumArtworkUrl = albumArtworkUrl
+  } else {
+    logger.debug('updating album artwork', {
+      previousAlbumArtworkUrl,
+      albumArtworkUrl,
+    })
+    previousAlbumArtworkUrl = albumArtworkUrl
   }
-
-  logger.debug('updating album artwork', { albumArtworkUrl })
 
   // Get the average color of the album artwork
   try {
